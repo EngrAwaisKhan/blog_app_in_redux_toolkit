@@ -1,24 +1,36 @@
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { postAdded } from './postsSlice';
+import { addNewPost } from './postsSlice';
 import { selectAllUsers } from '../users/usersSlice';
 
 const AddPostForm = () => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [addRequestStatus, setAddRequestStatus] = useState('idle');
   const dispatch = useDispatch();
 
   const [userId, setUserId] = useState('');
   const users = useSelector(selectAllUsers);
 
+  const canSave =
+    [title, content, userId].every(Boolean) && addRequestStatus === 'idle';
+
   const submitHandler = () => {
-    if (title && content) {
-      dispatch(postAdded(title, content, userId));
-      setTitle('');
-      setContent('');
+    if (canSave) {
+      try {
+        setAddRequestStatus('pending');
+        dispatch(addNewPost({ title, body: content, userId })).unwrap();
+        setTitle('');
+        setContent('');
+        setUserId('');
+      } catch (error) {
+        console.error('Failed to save the post', error);
+      } finally {
+        setAddRequestStatus('idle');
+      }
     }
   };
-  const canSave = Boolean(title) && Boolean(content) && Boolean(userId);
+
   return (
     <section>
       <h2>Add New Post</h2>
@@ -34,7 +46,7 @@ const AddPostForm = () => {
         <select value={userId} onChange={(e) => setUserId(e.target.value)}>
           <option value="">select author</option>
           {users.map((user) => (
-            <option key={user._id} value={user._id}>
+            <option key={user.id} value={user.id}>
               {user.name}
             </option>
           ))}
@@ -45,7 +57,12 @@ const AddPostForm = () => {
           value={content}
           onChange={(e) => setContent(e.target.value)}
         />
-        <button type="button" className='btn' onClick={submitHandler} disabled={!canSave}>
+        <button
+          type="button"
+          className="btn"
+          onClick={submitHandler}
+          disabled={!canSave}
+        >
           Save Post
         </button>
       </form>
